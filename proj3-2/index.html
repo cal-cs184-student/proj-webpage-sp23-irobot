@@ -1,7 +1,392 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Your Name  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+
+
+<script>
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      }
+    };
+</script>
+<script id="MathJax-script" async
+src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3-2: Additional Features to PathTracer</h1>
+    <h2 align="middle">Karthik Dharmarajan, Lawrence Yunliang Chen, CS184-irobot3-2</h2>
+    <h2 align="middle">Website URL: <a href="https://cal-cs184-student.github.io/proj-webpage-sp23-irobot/proj-webpage-sp23-irobot/proj3-2/index.html">https://cal-cs184-student.github.io/proj-webpage-sp23-irobot/proj-webpage-sp23-irobot/proj3-2/index.html</a></h2>
+
+    <div class="padded">
+
+
+        * NOTE: For this project, you will choose TWO out of the four given parts to complete. One of those parts must be Part 1 or Part 2. In other words, you can choose any combination of two parts except the pair (Part 3, Part 4).
+    
+    <h2 align="middle">Overview</h2>
+    <!-- An overview of the project, including your approach to and implementation for each of the parts, as well as what problems you have encountered and how you solved them. Strive for clarity and succinctness. -->
+    
+    <p>This project covers material modeling (mirror and glass materials, and glossy microfacet materials), as well as rendering scenes with environment light and modeling thin lenses to simulate the effect of depth of field. In particular, for Part 1, the goal is to implement mirror and glass models with both reflection and refraction. To handle refraction, we use Snell's equation with spherical coordinates. To handle glass material, we use Schlick's approximation to decide the ratio of the reflection energy to the refraction energy, which translates to a coin-flip probability of either reflecting or refracting in implementation. For Part 2, we implement the microfacet model for isotropic rough conductors. We implement the Fresnel term and normal distribution function (NDF) with importance sampling of the BRDF function. For Part 3, the goal is to implement an infinite environment light, which is a light that supplies incident radiance from all directions on the sphere. The intensity of incoming light from each direction is defined by a texture map parameterized by phi and theta, and the goal is to implement both uniform and importance sampling of the environment light source. For Part 4, we simulate a thin lens to enable the depth of field effect. By changing the radius of the lens and the focal distance, we are able to render scenes with parts of the objects in focus and parts of the objects out of focus.</p>
+    
+    <p>In this project, we choose to complete Part 2 and Part 4.</p>
+
+    <p>In particular, we implement the microfacet model of the material and the thin lens model of the camera. For Part 2, we first implement the Beckmann distribution $D(h)$ for the NDF with hyperparameter $\alpha$ and the Fresnel term $F(\omega_i)$ with hyperparameter $\eta$ and $k$. We study the effect of $\alpha$ and look up the $\eta$ and $k$ values of real metals. We use importance sampling to sample the half vector $h$ from a distribution similar to the NDF to derive a sampled $\omega_i$ vector. For Part 4, we implement the code for generating rays. In particular, unlike the pinhole camera model, we need to sample points on the lens, generate many rays, and compute how they refract using the plane of focus. This allows us to simulate the depth of field, where some parts are blurry while others are clear. </p>
+
+    <p>This project went relatively smooth for us. One bug we encountered was that we misunderstood $\theta$ and $\phi$ in spherical coordinates in Part 2. After figuring out the issues, we were able to get the correct rendering.</p>
+
+    <br />
+
+        <!--<h3 align="middle">Part 1. Mirror and Glass Materials</h3>
+
+    <p><b>
+        Show a sequence of six images of scene `CBspheres.dae` rendered with `max_ray_depth` set to 0, 1, 2, 3, 4, 5, and 100. The other settings should be at least 64 samples per pixel and 4 samples per light. Make sure to include all screenshots.
+    </b></p>
+    <p>
+        Your response goes here.
+    </p>
+    <br>
+    <p><b>
+        Point out the new multibounce effects that appear in each image.
+    </b></p>
+    <p>
+        Your response goes here.
+    </p>
+    <br>
+    <p><b>
+        Explain how these bounce numbers relate to the particular effects that appear. Make sure to include all screenshots.
+    </b></p>
+    <p>
+        Your response goes here.
+    </p>
+    <br>-->
+
+
+        <h3 align="middle">Part 2. Microfacet Material</h3>
+        <p>
+            <b>
+                Short summary of our implementation.
+            </b>
+        </p>
+
+        <p>We implement the BRDF evaluation function MicrofacetBSDF:: $f()$ using the following formula:
+        $$
+        f=\frac{F\left(\omega_i\right) * G\left(\omega_o, \omega_i\right) * D(h)}{4 *\left(n \cdot \omega_o\right) *\left(n \cdot \omega_i\right)}
+        $$
+        where $F$ is the Fresnel term, $G$ is the shadowing-masking term, and $D$ is the normal distribution function (NDF). $n$ is the macro surface normal, which is always $(0,0,1)$ in local coordinates. $h$ is the half vector.</p>
+
+        <p>We implement the normal distribution function (NDF) MicrofacetBSDF::D() with the following formula:
+        $$
+        D(h)=\frac{e^{-\frac{\tan ^2 \theta_h}{a^2}}}{\pi \alpha^2 \cos ^4 \theta_h}
+        $$
+        where $\alpha$ is the roughness of the macro surface, $\theta_h$ is the angle between $h$ and the macro surface normal $n$.</p>
+        
+        <p>We implement the Fresnel term MicrofacetBSDF: : $F()$ using the following approximation to calculate the air-conductor Fresnel term:
+        $$
+        \begin{gathered}
+        F=\frac{R_s+R_p}{2}, \\
+        R_s=\frac{\left(\eta^2+k^2\right)-2 \eta \cos \theta_i+\cos ^2 \theta_i}{\left(\eta^2+k^2\right)+2 \eta \cos \theta_i+\cos ^2 \theta_i}, \\
+        R_p=\frac{\left(\eta^2+k^2\right) \cos ^2 \theta_i-2 \eta \cos \theta_i+1}{\left(\eta^2+k^2\right) \cos ^2 \theta_i+2 \eta \cos \theta_i+1} .
+        \end{gathered}
+        $$
+        The Fresnel terms are for R, G, B channels respectively, assuming that each channel has a fixed wavelength.</p>
+        
+        <p>
+            For importance sampling, we first need to sample $\theta$ and $\phi$ from the following pdfs $p_\theta$ and $p_\phi$ :
+            $$
+            \begin{gathered}
+            p_\theta\left(\theta_h\right)=\frac{2 \sin \theta_h}{\alpha^2 \cos ^3 \theta_h} e^{-\tan ^2 \theta_h / \alpha^2}, \\
+            p_\phi\left(\phi_h\right)=\frac{1}{2 \pi}
+            \end{gathered}
+            $$
+            We use the inversion method. In particlar, we sample two uniform random variables $r_1$ and $r_2$ within $[0,1)$ and calculate $\theta_h$ and $\phi_h$ as follows:
+            $$
+            \begin{gathered}
+            \theta_h=\arctan \sqrt{-\alpha^2 \ln \left(1-r_1\right)}, \\
+            \phi_h=2 \pi r_2
+            \end{gathered}
+            $$
+            After getting $\theta$ and $\phi$, we compute the sampled microfacet normal $h = (sin(\theta_h)  cos(\phi_h), sin(\phi_h)  sin(\theta_h), cos(\theta_h))$. 
+            
+            We reflect $\omega_o$ according to $h$ to get $\omega_i = -\omega_o + 2 (h \cdot \omega_o)  h$.
+            
+            The pdf of sampling $\omega_i$ w.r.t. solid angle can be computed using the following formulas:
+            $$
+            p_\omega(h)=\frac{p_\theta\left(\theta_h\right) \cdot p_\phi\left(\phi_h\right)}{\sin \left(\theta_h\right)}
+            $$
+            $$
+            p_\omega\left(\omega_i\right)=\frac{p_\omega(h)}{4\left(\omega_i \cdot h\right)}
+            $$
+            We set $\omega_i$ and its pdf if the angle between $\omega_i$ and $n$ is less than 90$^\circ$, and return 0 otherwise.
+        </p>
+        <p>
+            <b>
+                Show a screenshot sequence of 4 images of scene `CBdragon_microfacet_au.dae` rendered with $\alpha$ set to 0.005, 0.05, 0.25 and 0.5. The other settings should be at least 128 samples per pixel and 1 samples per light. The number of bounces should be at least 5. Describe the differences between different images. Note that, to change the $\alpha$, just open the .dae file and search for `microfacet`.
+            </b>
+        </p>
+        <p>Here are the images:</p>
+        <div align="middle">
+            <table style="width:100%">
+                <tr align="center">
+                    <td>
+                        <img src="images/dragon_alpha_0_005.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae ($\alpha = 0.005$)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/dragon_alpha_0_05.png" align="middle" width="600px" />
+                        <figcaption>keenan/CBdragon_microfacet_au.dae ($\alpha = 0.05$)</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="images/dragon_alpha_0_25.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae ($\alpha = 0.25$)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/dragon_alpha_0_5.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae ($\alpha = 0.5$)</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <br />
+        <p>
+            We render these images were rendered using 128 samples/pixel, 1 sample/light, and max ray depth equal to 5.
+        </p>
+        <div align="middle">
+            <table style="width:100%">
+                <tr align="center">
+                    <td>
+                        <img src="images/alpha_0_05.png" align="middle" width="300px" />
+                        <figcaption>Beckmann normal distribution function ($\alpha = 0.05$)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/alpha_0_5.png" align="middle" width="300px" />
+                        <figcaption>Beckmann normal distribution function ($\alpha = 0.5$)</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <br />
+        <p>
+            Comparing the 4 images, we can see that the smaller $\alpha$ is, the glossier the surface looks, and the larger $\alpha$ is, the more diffuse the surface looks. This is because when $\alpha$ is small, the Beckmann distribution of the half vector $h$ is more peaked at the macro surface normal $n$, as seen from the two plots above. This means that when $\alpha$ is small, it is not likely that the underlying microfacets varies a lot. In other words, the macro surface is smoother and the normals of the microfacets are concentrated. So the surface of materials with small $\alpha$ will look more gloosy.
+        </p>
+        <br />
+        <p>
+            <b>
+                Show two images of scene `CBbunny_microfacet_cu.dae` rendered using cosine hemisphere sampling (default) and your importance sampling. The sampling rate should be fixed at 64 samples per pixel and 1 samples per light. The number of bounces should be at least 5. Briefly discuss their difference.
+            </b>
+        </p>
+        <div align="middle">
+            <table style="width:100%">
+                <tr align="center">
+                    <td>
+                        <img src="images/bunny_hemisphere.png" align="middle" width="600px" />
+                        <figcaption>sky/CBbunny_microfacet_cu.dae (cosine hemisphere sampling)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/bunny_importance.png" align="middle" width="600px" />
+                        <figcaption>sky/CBbunny_microfacet_cu.dae (importance sampling)</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <br />
+        <p>
+            Both the cosine hemisphere sampling method and the importance sampling are unbiased. However, the cosine hemisphere sampling has a lot more noise and will take more samples to converge. This is because based on the importance sampling theory, the more the pdf of the sampled direction $\omega_i$ is to the BSDF, the less noise we will have. Here, instead of sampling $\omega_i$ directly, we sample the half vector $h$ and reflect $\omega_r$ across $h$ to obtain the $\omega_i$. And to sample $h$, we choose a distribution that resembles the NDH $D(h)$, and for ease of sampling, we decompose $h$ into $\theta$ and $\omega$. By doing importance sampling in this way, we can see that the rendered bunny surface is a lot less noisy at the same number of samples per pixel and per light. In contast, cosine hemisphere sampling is perfect for sampling diffuse BRDFs since the distributions match, but is not suitable for Beckmann distribution especially when $\alpha$ is small and the surface is glossy.
+        </p>
+        <br />
+        <p>
+            <b>
+                Show at least one image with some other conductor material, replacing `eta` and `k`. Note that you should look up values for real data rather than modifying them arbitrarily. Tell us what kind of material your parameters correspond to.
+            </b>
+        </p>
+        <div align="middle">
+            <table style="width:100%">
+                <tr align="center">
+                    <td>
+                        <img src="images/dragon_mercury.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae (mercury: $\alpha = 0.05$)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/dragon_zinc.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae (zinc: $\alpha = 0.25$)</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <br />
+        <p>
+            We looked up the $\eta$ and $k$ values for mercury and zinc from the <a href="https://refractiveindex.info/">recommended website</a> at wavelengths 614 nm (red), 549 nm (green), and 466 nm (blue). For mercury, we used $\eta = (1.8795, 1.5472, 1.1353)$ and $k = (5.1076, 4.6437, 3.9980)$. For zinc, we used $\eta = (1.1181, 0.92678, 0.71515)$ and $k = (5.5577, 4.9657, 4.1696)$. The images above show the results of rendering the dragon with these materials. As a reference, for gold, $\eta = (0.21646, 0.42833, 1.3284)$ and $k = (3.2390, 2.4599, 1.8661)$. We selected the $\alpha$ values such that the rendered materials look similar to pictures of them we found online, where mercury is more glossy and zinc is more diffuse.
+        </p>
+        <p>
+            Comparing the mercury and zinc images with the gold images, we can see that $\alpha$ determines the amount of specular reflection. The higher $\alpha$ is, the more glossy the reflection will be. The $\eta$ and $k$ values determine the color of the reflection. For both mercury and zinc, their red component of $\eta$ is larger than the green component, larger than the blue component, and they both look silver. For gold, the blue component of $\eta$ is significantly greater than the other two, and it looks yellowish.
+        </p>
+        <br />
+
+
+
+
+        <!--<h3 align="middle">Part 3. Environment Lightl</h3>
+    <b>Pick one *.exr* file to use for all subparts here. Include a converted *.jpg* of it in your website so we know what map you are using.</b>
+
+    <p><b>
+        In a few sentences, explain the ideas behind environment lighting (i.e. why we do it/how it works).
+    </b></p>
+    <p>
+        Your response goes here.
+    </p>
+    <br>
+    <p><b>
+        Show the *probability_debug.png* file for the *.exr* file you are using, generated using the `save_probability_debug()` helper function after initializing your probability distributions.
+    </b></p>
+    <p>
+        Your response goes here.
+    </p>
+    <br>
+    <p><b>
+        Use the `bunny_unlit.dae` scene and your environment map *.exr* file and render two pictures, one with uniform sampling and one with importance sampling. Use 4 samples per pixel and 64 samples per light in each. Compare noise levels. Make sure to include all screenshots.
+    </b></p>
+    <p>
+        Your response goes here.
+    </p>
+    <br>
+    <p><b>
+        Use a different image (if you did part 2, we recommend `bunny_microfacet_cu_unlit.dae`) and your environment map *.exr* file and render two pictures, one with uniform sampling and one with importance sampling. Use 4 samples per pixel and 64 samples per light in each. Compare noise levels. Make sure to include all screenshots.
+    </b></p>
+    <p>
+        Your response goes here.
+    </p>
+    <br>-->
+
+
+
+        <h3 align="middle">Part 4. Depth of Field</h3>
+        <p>
+            <b>
+                Short summary of our implementation.
+            </b>
+        </p>
+
+        <p>
+            The first part of the ray generation is exactly as before. Given a position on the image plane, we convert it to the camera frame with the field of view scaling and then convert to the world frame using the camera's position and rotation matrix. We cast a ray that passes through the pixel and the center of the camera, and set the ray's near and far clipping planes.
+        </p>
+        <p>
+            The second part is new to the thin lens model. We first generate a random point <code>pLens</code> on the lens, which is a circle with radius $\text{lensRadius}$, using the following formula: 
+            $$\text{pLens}=(\text{lensRadius} \cdot \sqrt{rndR} \cdot cos(rndTheta),\text{lensRadius} \cdot \sqrt{rndR} \cdot sin(rndTheta),0),$$
+            where $rndR$ and $rndTheta$ that are random numbers uniformly distributed in $[0,1]$ and $[0,2\pi)$, respectively.
+            
+            We then compute the intersection point <code>pFocus</code> of the ray with the plane of focus, which is a plane with distance <code>focalDistance</code> from the lens. 
+        </p>
+        <p>
+            Then, we construct another ray, which is the ray that we care about. That ray originates from our sampled point <code>pLens</code> on the lens and its direction points towards <code>pFocus</code>. We do the necessary transformation between the camera and the world before constructing that ray and set its near and far clipping planes.
+        </p>
+        <b>
+            For these subparts, we recommend using a microfacet BSDF scene to show off the cool out of focus effects you can get with depth of field!
+        </b>
+        <p>
+            <b>
+                In a few sentences, explain the differences between a pinhole camera model and a thin-lens camera model.
+            </b>
+        </p>
+        <p>
+            A pinhole camera model assumes that light passes through a single point, or pinhole, with straight line, and creates an inverted image on the opposite side of the pinhole. As far as computer graphics is concerned, this means to determine irradiance of any position on the image plane, we only need to shoot one ray through the pinhole. As a corollary, with the pin-hole model, everything is in focus, and we cannot simulate the effect of depth of field.
+        </p>
+        <p>
+            In contrast, for a thin-lens model, we assume a positive aperture. At each position on the image plane, there are multiple rays coming from different direction through the thin lens, getting bent by the lens, and arriving at the same position. This means that we need to shoot multiple rays through the lens to determine irradiance of any position on the image plane. We ignore the lens' actual thickness, but still assume that it refracts light. In particlar, With the lens model, objects are in focus only if they lie on a plane that is at focalDistance from the lens. This determines how light rays are bent. For parts of the scene that do not lie on the plane of focus, they will look blurry because their outgoing rays do not converge to the same point. As a corollary, with the thin-lens model, we can simulate the effect of depth of field. Additionally, when the aperture/lens radius increases, the circle of confusion increases, and so the depth of field decreases. For physical cameras, when the aperture increases, the exposure increases as more lights are coming in, although we do not model this effect in our PathTracer.
+        </p>
+        <br />
+        <p>
+            <b>
+                Show a "focus stack" where you focus at 4 visibly different depths through a scene. Make sure to include all screenshots.
+            </b>
+        </p>
+        <p>Here are the images:</p>
+        <div align="middle">
+            <table style="width:100%">
+                <tr align="center">
+                    <td>
+                        <img src="images/dragon_focus_1.7.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae (focalDistance = 1.7)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/dragon_focus_2.png" align="middle" width="600px" />
+                        <figcaption>keenan/CBdragon_microfacet_au.dae (focalDistance = 2)</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="images/dragon_focus_2.2.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae (focalDistance = 2.2)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/dragon_focus_2.4.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae (focalDistance = 2.4)</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <br />
+        <p>
+            We use lensRadius = 0.23 for all images. We can see that as the focalDistance increases, the part that is in focus moves backwards. We rotate the dragon so the effect on the depth that is in focus is more salient.
+        </p>
+        <br />
+        <p>
+            <b>
+                Show a sequence of 4 pictures with visibly different aperture sizes, all focused at the same point in a scene. Make sure to include all screenshots.
+            </b>
+        </p>
+        <p>Here are the images:</p>
+        <div align="middle">
+            <table style="width:100%">
+                <tr align="center">
+                    <td>
+                        <img src="images/dragon_aperture_lensRadius_0.1.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae (lensRadius = 0.1)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/dragon_aperture_lensRadius_0.23.png" align="middle" width="600px" />
+                        <figcaption>keenan/CBdragon_microfacet_au.dae (lensRadius = 0.23)</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="images/dragon_aperture_lensRadius_0.4.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae (lensRadius = 0.4)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/dragon_aperture_lensRadius_0.6.png" align="middle" width="600px" />
+                        <figcaption>sky/CBdragon_microfacet_au.dae (lensRadius = 0.6)</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <br />
+        <p>
+            We use focalDistance = 2.4 for all images. We can see that as the aperture size (lens radius) becomes larger, the depth of field becomes smaller, and the circle of confusion becomes larger. For small aperture size (lens radius = 0.1), most of the scene is still pretty clear. For large aperture sizes, since we focus on the center of the dragon, we can see that the surrounding region becomes blurry.
+        </p>
+        <br />
+        <h2 align="middle">Final Comments</h2>
+        <h3>Collaboration</h3>
+        <p>Our approach to collaboration was to work through the programming elements of Part 2 and Part 4 together. For each question, we discuss the general high level approach before going down into the code and typing it up. Through this method of collaboration, we were able to avoid major bugs for this project and so it went smoothly.</p>
+
+        <p>In this project, we learned about some very cool techniques to produce realistic looking microfacet materials and introducing a thin lens for depth of field effects (Part 2 and Part 4). Implementing and changing the various properties of microfacet materials, such as $\alpha$, $\eta$, and k showed us the widely varying colors/finishes that could be represented. In particular, as we switched from gold to zinc or mercury, we notice that microfacets have the ability to represent conductor surfaces.
+           Implementing the thin lens ray generation showed a very cool application of several concepts of cameras and lenses, and changing lens properties to change the focus and aperture of the camera, and the observed effects complement what was taught in class nicely.
+        </p>
+    </div>
+</body>
 </html>
+
