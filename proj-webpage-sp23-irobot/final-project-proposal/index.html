@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    background-color: white;
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+  kbd {
+    color: #121212;
+  }
+</style>
+<title>CS 184/284A Final Project Proposal</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    }
+  };
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+</head>
+
+
+<body>
+
+    <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2023</h1>
+    <h1 align="middle">BagSim: A Realistic Physics Simulator for Deformable Bags</h1>
+    <h2 align="middle">Lawrence Yunliang Chen, Andy Huang, Karthik Dharmarajan, Jeffrey Tan</h2>
+
+    <br /><br />
+
+
+    <h2 align="middle">Summary</h2>
+
+    <p>BagSim is a real-time interactive simulation of bags and their interactions with rigid bodies. In particular, it simulates the deformation of bags of varying shapes and materials when colliding with rigid objects or when guided by a force.</p>
+
+    <br />
+
+    <h2 align="middle">Problem Description</h2>
+    <p>Many tasks in home, commercial, and industrial settings require the manipulation of 3D deformable objects such as bags. Robots may learn to automate the process of inserting rigid items into a bag from an unstructured initial configuration [1, 2], but doing so requires collecting timely and costly real world data to train models. One approach to reduce the real world data required for training models for manipulating deformable objects is to incorporate simulation data [3]. Deformable objects such as bags are challenging to accurately simulate physically, because of the variety of behaviors encountered depending on the material it is made out of. For example, certain hard plastic bags may stay open after lifting the bag open, but other softer plastics may collapse if the bag is not held. Current bag simulators, such as DeformableRavens [4], do not simulate critical properties of bags, such as handles, and also do not cover different types of bags and shapes. </p>
+
+    <p>
+        This project will contribute
+    </p>
+    <ol>
+        <li>BagSim, a realistic physics simulator for deformable bags</li>
+        <li>Experimental evaluation of BagSim compared to real bag interactions</li>
+        <li>Optional / Extension: A systematic approach to tuning simulator parameters from real data</li>
+    </ol>      
+
+    <p>We plan on approaching this problem by building on top of existing deformable simulation code, such as ClothSim, Unity, SoftGym [5], or DeormableRavens [4]. One approach we are considering is modeling a bag as several cloths that are attached together, though this may not accurately simulate a plastic bag holding shape after some forces have been applied to it. We would most likely model the property of stiffness of the bag so that the bag can retain its shape after it has been deformed. If time permits, we would also like to add air resistance into the simulation.</p>
+    <br />
+    <h2 align="middle">Goals and Deliverables</h2>
+    <h3>Planned Delivery</h3>
+    <ul>
+        <li>Simulate the shapes of various types of bags (with and without handles or bottoms, stiff or soft fabric material)</li>
+        <li>Simulate the physics of bag movement (elasticity, dynamics, deformation) when dragged around by cursor</li>
+        <li>Simulate the interaction between the deformable bag and rigid objects when placed into the bag</li>
+        <li>Tuning the simulation parameters to approximately match real bags manually</li>
+        <li>
+            We aim to answer the questions: How closely do the physics in BagSim resemble an identical bag in the real world when perturbed? Is BagSim suitable for a real time simulation?
+            <ul>
+                <li>
+                    Visual evaluation of the simulator across each of the different bag types (comparing BagSim to DeformableRavens and a similar real bag)
+                </li>
+                <li>
+                    Benchmarked computation time for generating the state of the bag after some perturbation
+                </li>
+            </ul>
+        </li>
+    </ul>
+    <h3>Aspirational Delivery</h3>
+    <ul>
+        <li>Evaluation by taking images of the same sim and real bag before and after perturbations, and then comparing the images with some metric such as IoU</li>
+        <li>More bag types, eg. mesh bags, bags with multiple layers</li>
+        <li>Rendering with semi-transparent plastic surface</li>
+        <li>Developing a method for systematically tuning the simulation from a small amount of real data about a given bag</li>
+        <li>Air resistance or fluid resistance when moving the bag</li>
+        <li>Lighting to accentuate wrinkles on the bag</li>
+    </ul>
+    <h2 align="middle">Schedule</h2>
+    <p>
+        Week 1
+        <ul>
+            <li>Finalize the tech stack that will be used</li>
+            <li>Set up the simulation infrastructure with the selected tech stack</li>
+            <li>Set up the general physics rig for the bag</li>
+        </ul>
+        Week 2
+        <ul>
+            <li>Implement/modify core physics engine used for bags</li>
+            <li>Create several models of bags, possibly in Blender</li>
+        </ul>
+        Week 3
+        <ul>
+            <li>Debugging and making sure that simulation of an initial bag is realistic</li>
+            <li>Tuning simulation parameters to match various bags</li>
+            <li>Stress-testing simulation speed and stability</li>
+        </ul>
+        Week 4
+        <ul>
+            <li>Write final report</li>
+            <li>Generate figures and videos of BagSim</li>
+        </ul>
+    </p>
+
+    <h2 align="middle">Resources</h2>
+    <h3>Software/OS</h3>
+    Starting points for the simulation:
+    <ul>
+        <li>Project 4: Cloth Sim source code</li>
+        <li>DeformableRavens [4] /SoftGym [5] source code</li>
+        <li>Unity engine</li>
+        <li>Blender for creating bag models</li>
+    </ul>
+
+    Operating Systems:
+    <ul>
+        <li>If we use Unity:
+            <ul>
+                <li>Windows and macOS</li>
+            </ul>
+        </li>
+        <li>Otherwise
+            <ul>
+                <li>Linux machine or Linux VM</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Hardware</h3>
+    <ul>
+        <li>CPU: M1 Pro, Ryzen 5</li>
+        <li>GPU: 2070, 3090</li>
+    </ul>
+
+    <h3>References</h3>
+    <p>[1] Chen, Lawrence Yunliang, et al. "AutoBag: Learning to Open Plastic Bags and Insert Objects." arXiv preprint arXiv:2210.17217 (2022). https://arxiv.org/pdf/2210.17217.pdf <br>
+        [2] Chen, Lawrence Yunliang, et al. "Bagging by Learning to Singulate Layers Using Interactive Perception." arXiv preprint arXiv:2303.16898 (2023). https://arxiv.org/pdf/2303.16898.pdf <br>
+        [3] Lim, Vincent, et al. "Real2sim2real: Self-supervised learning of physical single-step dynamic actions for planar robot casting." 2022 International Conference on Robotics and Automation (ICRA). IEEE, 2022. https://arxiv.org/pdf/2111.04814.pdf <br> 
+        [4] Seita, Daniel, et al. "Learning to rearrange deformable cables, fabrics, and bags with goal-conditioned transporter networks." 2021 IEEE International Conference on Robotics and Automation (ICRA). IEEE, 2021. https://arxiv.org/pdf/2012.03385.pdf <br>
+        [5] Lin, Xingyu, et al. "Softgym: Benchmarking deep reinforcement learning for deformable object manipulation." Conference on Robot Learning. PMLR, 2021. https://proceedings.mlr.press/v155/lin21a/lin21a.pdf <br>
+        </p>
+</body>
+</html>
